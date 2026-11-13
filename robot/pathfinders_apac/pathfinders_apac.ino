@@ -839,7 +839,7 @@ void setup1() {
 
 void loop1() {
 
-  // Filtered results omit the image payload, which times out over I2C.
+  // In this library, true requests result-only data without the image payload.
   if (!AI.invoke(1, true, false) && !dataincoming) {
 
     for (int i = 0; i < AI.classes().size(); i++) {
