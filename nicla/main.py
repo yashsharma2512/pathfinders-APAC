@@ -100,6 +100,8 @@ while True:
 
     img = sensor.snapshot()
     dist = tof.read()
+    if dist <= 0:
+        continue
 
     width_px = 0
 
