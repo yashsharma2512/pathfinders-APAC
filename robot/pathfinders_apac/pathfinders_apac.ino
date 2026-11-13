@@ -38,20 +38,18 @@ enum VictimTarget {
   TARGET_UNHARMED = 2
 };
 
-// Grove model class IDs. Set these to the IDs in the trained Phi/Psi/Omega model.
-const int GROVE_CLASS_PHI = 4;
-const int GROVE_CLASS_PSI = 5;
-const int GROVE_CLASS_OMEGA = 6;
-
-// Provisional meanings; change these three assignments after model training.
-const VictimTarget GROVE_PHI_TARGET = TARGET_HARMED;
-const VictimTarget GROVE_PSI_TARGET = TARGET_STABLE;
-const VictimTarget GROVE_OMEGA_TARGET = TARGET_UNHARMED;
+// Installed model label order: harmed, unharmed, stable, nothing.
+// Assume zero-based IDs; confirm them from live inference once the camera works.
+const int GROVE_CLASS_HARMED = 0;
+const int GROVE_CLASS_UNHARMED = 1;
+const int GROVE_CLASS_STABLE = 2;
+const int GROVE_CLASS_NOTHING = 3;
 
 VictimTarget groveVictimTarget(int classId) {
-  if (classId == GROVE_CLASS_PHI) return GROVE_PHI_TARGET;
-  if (classId == GROVE_CLASS_PSI) return GROVE_PSI_TARGET;
-  if (classId == GROVE_CLASS_OMEGA) return GROVE_OMEGA_TARGET;
+  if (classId == GROVE_CLASS_HARMED) return TARGET_HARMED;
+  if (classId == GROVE_CLASS_UNHARMED) return TARGET_UNHARMED;
+  if (classId == GROVE_CLASS_STABLE) return TARGET_STABLE;
+  if (classId == GROVE_CLASS_NOTHING) return TARGET_NONE;
   return TARGET_NONE;
 }
 
@@ -842,23 +840,31 @@ void loop1() {
   // In this library, true requests result-only data without the image payload.
   if (!AI.invoke(1, true, false) && !dataincoming) {
 
+    int bestClass = -1;
+    int bestScore = -1;
     for (int i = 0; i < AI.classes().size(); i++) {
-      static unsigned long lastGroveLog = 0;
-      if (millis() - lastGroveLog >= 1000) {
-        Serial.print("[GROVE] Class: ");
-        Serial.print(AI.classes()[i].target);
-        Serial.print(" | Score: ");
-        Serial.println(AI.classes()[i].score);
-        lastGroveLog = millis();
+      if (AI.classes()[i].score > bestScore) {
+        bestClass = AI.classes()[i].target;
+        bestScore = AI.classes()[i].score;
       }
+    }
 
-      VictimTarget target = groveVictimTarget(AI.classes()[i].target);
-      if (target == TARGET_NONE) continue;
+    if (bestClass < 0) return;
 
+    static unsigned long lastGroveLog = 0;
+    if (millis() - lastGroveLog >= 1000) {
+      Serial.print("[GROVE] Class: ");
+      Serial.print(bestClass);
+      Serial.print(" | Score: ");
+      Serial.println(bestScore);
+      lastGroveLog = millis();
+    }
+
+    VictimTarget target = groveVictimTarget(bestClass);
+    if (target != TARGET_NONE) {
       _target = target;
-      _confidence = AI.classes()[i].score;
+      _confidence = bestScore;
       dataincoming = true;
-      break;
     }
   }
 }
