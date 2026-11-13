@@ -839,9 +839,19 @@ void setup1() {
 
 void loop1() {
 
-  if (!AI.invoke(1, false, false) && !dataincoming) {
+  // Filtered results omit the image payload, which times out over I2C.
+  if (!AI.invoke(1, true, false) && !dataincoming) {
 
     for (int i = 0; i < AI.classes().size(); i++) {
+      static unsigned long lastGroveLog = 0;
+      if (millis() - lastGroveLog >= 1000) {
+        Serial.print("[GROVE] Class: ");
+        Serial.print(AI.classes()[i].target);
+        Serial.print(" | Score: ");
+        Serial.println(AI.classes()[i].score);
+        lastGroveLog = millis();
+      }
+
       VictimTarget target = groveVictimTarget(AI.classes()[i].target);
       if (target == TARGET_NONE) continue;
 
