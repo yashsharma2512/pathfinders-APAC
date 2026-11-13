@@ -54,8 +54,13 @@ confidence. A later 60-second test matched all 43 Nicla USB messages to 43
 complete messages on the Pico UART listener.
 
 The Grove Vision AI V2 acknowledges at I2C address `0x62` on Pico GPIO 18/19.
-Unfiltered `AI.invoke(1, false, false)` requests timed out over I2C; filtered
-`AI.invoke(1, true, false)` requests returned classes. The updated robot sketch
-logged class ID 2 with scores of 50–76. The installed model has four generic
-labels (`Class 1` through `Class 4`), so the Phi/Psi/Omega class IDs and victim
-meanings remain unverified. Motor and kit-drop responses have not been tested.
+With the previous model, `AI.invoke(1, false, false)` returned code 3 over I2C;
+the result-only `AI.invoke(1, true, false)` request returned classes. The robot
+sketch logged class ID 2 with scores of 50–76. Its class-to-victim mapping is
+still provisional.
+
+The model installed later on 13 November reports labels `harmed`, `unharmed`,
+`stable`, and `nothing`. During a subsequent check, both USB camera sampling and
+USB inference returned event code 3 (timeout), even with the Pico not polling
+the Grove. Reinitializing the sensor did not clear the error. Numeric class IDs
+for this new model and motor/kit-drop responses remain unverified.
