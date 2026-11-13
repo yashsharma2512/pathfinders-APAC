@@ -50,6 +50,12 @@ The Pico's old GPIO 7 connection is not the receiver used by this sketch.
 On 13 November 2026, the Pico 2 sketch was compiled, uploaded, and verified
 against the board's flash. A zero-stability UART test message sent from the
 Nicla's LP1 port reached the Pico, which printed its parsed target and zero
-confidence. This confirms the one-way UART link without triggering a victim
-action. Real victim recognition, motor and kit-drop behavior, and the Grove
-class IDs and Phi/Psi/Omega meanings still need validation on the robot.
+confidence. A later 60-second test matched all 43 Nicla USB messages to 43
+complete messages on the Pico UART listener.
+
+The Grove Vision AI V2 acknowledges at I2C address `0x62` on Pico GPIO 18/19.
+Unfiltered `AI.invoke(1, false, false)` requests timed out over I2C; filtered
+`AI.invoke(1, true, false)` requests returned classes. The updated robot sketch
+logged class ID 2 with scores of 50–76. The installed model has four generic
+labels (`Class 1` through `Class 4`), so the Phi/Psi/Omega class IDs and victim
+meanings remain unverified. Motor and kit-drop responses have not been tested.
