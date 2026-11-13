@@ -6,7 +6,7 @@ cognitive victim detection.
 ## Files
 
 - `robot/pathfinders_apac/pathfinders_apac.ino` — robot firmware.
-- `nicla/main.py` — existing Nicla program for cognitive targets.
+- `nicla/main.py` — Nicla Vision program for cognitive targets.
 
 ## Grove classes
 
@@ -28,9 +28,10 @@ Grove classes are ignored.
 
 ## Nicla cognitive targets
 
-The Nicla program sends `victim,stable_ms,x,y` at 115200 baud. The robot reads
-it on Pico GPIO 9 (RX) through `Serial2` (UART1), waits for the classification to remain stable for 750 ms,
-then maps it to the same victim actions:
+The Nicla program uses `UART("LP1", 115200)` on its J2-3 (D1/UART_TX) and
+J2-4 (D2/UART_RX) pins. It sends `victim,stable_ms,x,y`. The robot reads this
+on Pico 2 GPIO 9 (RX) through `Serial2` (UART1), waits for a classification
+to remain stable for 750 ms, then maps it to the same victim actions:
 
 | Nicla value | Meaning | Robot target |
 | ---: | --- | ---: |
@@ -38,13 +39,17 @@ then maps it to the same victim actions:
 | 1 | Stable | 1 |
 | 0 | Unharmed | 2 |
 
-Nicla TX connects to Pico GPIO 9 (physical pin 12), and the boards share ground.
-Pico GPIO 8 (physical pin 11) is the optional Pico TX line. Move any existing
-Nicla TX wire from Pico GPIO 7 (physical pin 10) to GPIO 9. GPIO 7 cannot be
-used as this hardware UART's RX pin.
+Connect Nicla J2-3 TX to Pico 2 GPIO 9 (physical pin 12, RX). Connect Nicla
+J2-6 GND to Pico GND (for example physical pin 13). Nicla J2-4 RX is optional:
+the current program only sends data. If two-way UART is needed, connect Pico
+GPIO 8 (physical pin 11, TX) to Nicla J2-4 RX. Both boards must share ground.
+The Pico's old GPIO 7 connection is not the receiver used by this sketch.
 
 ## Test status
 
-The Grove class routing and Nicla protocol were checked in code. The final
-class IDs, Phi/Psi/Omega meanings, and behavior need validation with the
-trained Grove model and physical robot.
+On 13 November 2026, the Pico 2 sketch was compiled, uploaded, and verified
+against the board's flash. A zero-stability UART test message sent from the
+Nicla's LP1 port reached the Pico, which printed its parsed target and zero
+confidence. This confirms the one-way UART link without triggering a victim
+action. Real victim recognition, motor and kit-drop behavior, and the Grove
+class IDs and Phi/Psi/Omega meanings still need validation on the robot.

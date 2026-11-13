@@ -40,7 +40,7 @@ red_led.off()
 green_led.off()
 blue_led.off()
 
-uart = UART(4, 115200)
+uart = UART("LP1", 115200)  # Nicla J2-3 TX, J2-4 RX
 
 # --------------------------------------------------------------------------
 # Distance sensor (ToF)
