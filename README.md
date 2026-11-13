@@ -62,5 +62,7 @@ still provisional.
 The model installed later on 13 November reports labels `harmed`, `unharmed`,
 `stable`, and `nothing`. During a subsequent check, both USB camera sampling and
 USB inference returned event code 3 (timeout), even with the Pico not polling
-the Grove. Reinitializing the sensor did not clear the error. Numeric class IDs
-for this new model and motor/kit-drop responses remain unverified.
+the Grove. Reinitializing the sensor and fully power-cycling the Grove did not
+clear the error. The same timeout persisted on Pico I2C after the power cycle.
+Numeric class IDs for this new model and motor/kit-drop responses remain
+unverified.
