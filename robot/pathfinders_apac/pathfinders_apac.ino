@@ -30,12 +30,37 @@ volatile int _target = 0;
 volatile int _confidence = 0;
 volatile bool _startAI = false;
 
+// Both cameras use the same robot actions after their own classifications.
+enum VictimTarget {
+  TARGET_NONE = -1,
+  TARGET_HARMED = 0,
+  TARGET_STABLE = 1,
+  TARGET_UNHARMED = 2
+};
+
+// Grove model class IDs. Set these to the IDs in the trained Phi/Psi/Omega model.
+const int GROVE_CLASS_PHI = 4;
+const int GROVE_CLASS_PSI = 5;
+const int GROVE_CLASS_OMEGA = 6;
+
+// Provisional meanings; change these three assignments after model training.
+const VictimTarget GROVE_PHI_TARGET = TARGET_HARMED;
+const VictimTarget GROVE_PSI_TARGET = TARGET_STABLE;
+const VictimTarget GROVE_OMEGA_TARGET = TARGET_UNHARMED;
+
+VictimTarget groveVictimTarget(int classId) {
+  if (classId == GROVE_CLASS_PHI) return GROVE_PHI_TARGET;
+  if (classId == GROVE_CLASS_PSI) return GROVE_PSI_TARGET;
+  if (classId == GROVE_CLASS_OMEGA) return GROVE_OMEGA_TARGET;
+  return TARGET_NONE;
+}
+
 int sen_SCL = 17;
 int sen_SDA = 16;
 
 // ---------------- NICLA VISION UART (NEW) ----------------
 
-#define NICLA_RX 7
+#define NICLA_RX 9
 #define NICLA_TX 8
 
 String niclaBuffer = "";
@@ -109,9 +134,9 @@ void receiveNiclaData() {
     lastNiclaReportedTarget = -1;
   }
 
-  while (Serial1.available()) {
+  while (Serial2.available()) {
 
-    char c = Serial1.read();
+    char c = Serial2.read();
 
     if (c == '\n') {
 
@@ -437,9 +462,9 @@ void setup() {
 
   // ---------------- NICLA UART SETUP (NEW) ----------------
 
-  Serial1.setRX(NICLA_RX);
-  Serial1.setTX(NICLA_TX);
-  Serial1.begin(115200);
+  Serial2.setRX(NICLA_RX);
+  Serial2.setTX(NICLA_TX);
+  Serial2.begin(115200);
 
   Serial.println("Nicla Vision UART READY!");
 
@@ -548,7 +573,7 @@ void loop() {
 
       switch (_target) {
 
-        case 0:
+        case TARGET_HARMED:
 
           Serial.println("Case Harmed triggered");
 
@@ -577,9 +602,9 @@ void loop() {
 
           break;
 
-        case 1:
+        case TARGET_STABLE:
 
-          Serial.println("Case Survivor triggered");
+          Serial.println("Case Stable triggered");
 
           setMotors(0, 0);
 
@@ -605,7 +630,7 @@ void loop() {
 
           break;
 
-        case 2:
+        case TARGET_UNHARMED:
 
           setMotors(0, 0);
 
@@ -626,27 +651,6 @@ void loop() {
             moveStraightAligned(wallOffset);
             delay(10);
           }
-
-          break;
-
-        case 3:
-          break;
-
-        case 4:
-
-          Serial.println("Case Y triggered");
-
-          break;
-
-        case 5:
-
-          Serial.println("Case G triggered");
-
-          break;
-
-        case 6:
-
-          Serial.println("Case R triggered");
 
           break;
 
@@ -838,11 +842,13 @@ void loop1() {
   if (!AI.invoke(1, false, false) && !dataincoming) {
 
     for (int i = 0; i < AI.classes().size(); i++) {
+      VictimTarget target = groveVictimTarget(AI.classes()[i].target);
+      if (target == TARGET_NONE) continue;
 
-      dataincoming = true;
-
-      _target = AI.classes()[i].target;
+      _target = target;
       _confidence = AI.classes()[i].score;
+      dataincoming = true;
+      break;
     }
   }
 }
