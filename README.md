@@ -25,6 +25,21 @@ current sketch no longer uses them. The Pico has logged class 3 at score 99,
 but IDs 0–2 still need live target checks to confirm their meanings. The
 sketch uses the highest-scoring class and ignores unknown IDs.
 
+## Silver tile stop
+
+The Pico reads the AS7341 on GPIO 16/17 and learns its clear-channel level
+from 12 ordinary-floor readings while the motors are stopped at startup. Start
+with the sensor at its normal height over a non-black, non-blue floor tile. If
+that baseline is unavailable, it keeps collecting ordinary-floor readings in
+the main loop.
+
+Three consecutive neutral-color readings with a clear-channel value at least
+70% above the learned floor and 200 counts higher latch a silver stop. The
+Pico stops both motors and blinks both NeoPixels white every 250 ms until the
+board restarts. `SILVER_CLEAR_RATIO_PERCENT` and `SILVER_MIN_CLEAR_RISE` are
+starting thresholds; they need tuning against the actual silver and ordinary
+floor tiles. The silver behavior has been compiled but not tested on hardware.
+
 ## Nicla cognitive targets
 
 The Nicla program uses `UART("LP1", 115200)` on its J2-3 (D1/UART_TX) and
