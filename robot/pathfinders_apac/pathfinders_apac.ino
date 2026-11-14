@@ -74,6 +74,28 @@ int lastNiclaReportedTarget = -1;
 
 Adafruit_AS7341 as7341;
 
+enum FloorColor {
+  FLOOR_OTHER = -1,
+  FLOOR_BLACK = 0,
+  FLOOR_BLUE = 1,
+  FLOOR_SILVER = 2
+};
+
+// Learn the ordinary floor before looking for a brighter silver tile.
+const uint8_t SILVER_BASELINE_SAMPLES = 12;
+const uint8_t SILVER_CONFIRM_SAMPLES = 3;
+const uint16_t SILVER_MIN_CLEAR_RISE = 200;
+const uint8_t SILVER_CLEAR_RATIO_PERCENT = 170;
+const unsigned long SILVER_BLINK_INTERVAL_MS = 250;
+
+uint32_t silverBaselineSum = 0;
+uint32_t silverClearBaseline = 0;
+uint8_t silverBaselineCount = 0;
+uint8_t silverMatchCount = 0;
+bool silverStopLatched = false;
+bool silverLedOn = false;
+unsigned long lastSilverBlink = 0;
+
 // ------------------- NeoPixel -------------------
 
 #define LED_PIN 23
@@ -219,27 +241,49 @@ void initAS7341Sensor() {
 
 int readColor() {
 
-  uint16_t readings[12];
-
   if (!as7341.readAllChannels()) {
     Serial.println("Error reading all channels!");
-    return -1;
+    return FLOOR_OTHER;
   }
 
   uint16_t red = as7341.getChannel(AS7341_CHANNEL_630nm_F7);
   uint16_t green = as7341.getChannel(AS7341_CHANNEL_555nm_F5);
   uint16_t blue = as7341.getChannel(AS7341_CHANNEL_480nm_F3);
+  uint16_t clear = as7341.getChannel(AS7341_CHANNEL_CLEAR);
 
   int RG = (red + green) / 2;
 
   if (red < 180 && RG < 120) {
     if (blue > 60)
-      return 1;
+      return FLOOR_BLUE;
     else
-      return 0;
+      return FLOOR_BLACK;
   }
 
-  return -1;
+  if (silverBaselineCount < SILVER_BASELINE_SAMPLES) {
+    silverBaselineSum += clear;
+    silverBaselineCount++;
+    if (silverBaselineCount == SILVER_BASELINE_SAMPLES) {
+      silverClearBaseline = silverBaselineSum / SILVER_BASELINE_SAMPLES;
+      Serial.print("Silver floor baseline: ");
+      Serial.println(silverClearBaseline);
+    }
+    return FLOOR_OTHER;
+  }
+
+  uint16_t minRGB = min(red, min(green, blue));
+  uint16_t maxRGB = max(red, max(green, blue));
+  bool neutral = (uint32_t)minRGB * 3 >= maxRGB;
+  bool brighter = (uint32_t)clear >= silverClearBaseline + SILVER_MIN_CLEAR_RISE &&
+                  (uint32_t)clear * 100 >= silverClearBaseline * SILVER_CLEAR_RATIO_PERCENT;
+
+  if (neutral && brighter) {
+    return FLOOR_SILVER;
+  }
+
+  // Follow gradual lighting changes without learning a sudden silver reading.
+  silverClearBaseline = (silverClearBaseline * 31 + clear) / 32;
+  return FLOOR_OTHER;
 }
 
 // ------------------- NeoPixel Helpers -------------------
@@ -528,6 +572,17 @@ void setup() {
 
   delay(100);
 
+  // Calibrate while the motors are stopped over an ordinary floor tile.
+  for (uint8_t i = 0;
+       i < SILVER_BASELINE_SAMPLES * 2 && silverBaselineCount < SILVER_BASELINE_SAMPLES;
+       i++) {
+    readColor();
+    delay(20);
+  }
+  if (silverBaselineCount < SILVER_BASELINE_SAMPLES) {
+    Serial.println("Silver baseline pending: move over an ordinary floor tile");
+  }
+
   _startAI = true;
 
   dataincoming = false;
@@ -541,6 +596,17 @@ void setup() {
 // =============================================================
 
 void loop() {
+
+  if (silverStopLatched) {
+    stopMotors();
+    if (millis() - lastSilverBlink >= SILVER_BLINK_INTERVAL_MS) {
+      silverLedOn = !silverLedOn;
+      showColor(silverLedOn ? strip.Color(255, 255, 255) : strip.Color(0, 0, 0));
+      lastSilverBlink = millis();
+    }
+    delay(10);
+    return;
+  }
 
   // -------- NICLA VISION RECEIVE DATA (NEW) --------
 
@@ -560,6 +626,21 @@ void loop() {
   distFrontLAST = distFront;
 
   int color = readColor();
+
+  if (color == FLOOR_SILVER) {
+    if (silverMatchCount < SILVER_CONFIRM_SAMPLES) silverMatchCount++;
+    if (silverMatchCount >= SILVER_CONFIRM_SAMPLES) {
+      silverStopLatched = true;
+      stopMotors();
+      silverLedOn = true;
+      showColor(strip.Color(255, 255, 255));
+      lastSilverBlink = millis();
+      Serial.println("Silver detected: motors stopped");
+      return;
+    }
+  } else {
+    silverMatchCount = 0;
+  }
 
   if (dataincoming) {
 
@@ -667,13 +748,13 @@ void loop() {
 
   // ------------------- Obstacle handling -------------------
 
-  if (color == 0) {
+  if (color == FLOOR_BLACK) {
 
     turnBot(90, RIGHT);
     turnBot(90, RIGHT);
 
   }
-  else if (color == 1) {
+  else if (color == FLOOR_BLUE) {
 
     delay(10);
 
