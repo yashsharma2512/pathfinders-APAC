@@ -10,21 +10,20 @@ cognitive victim detection.
 
 ## Grove classes
 
-The Grove model's class IDs and provisional victim meanings are grouped at the
-top of the robot sketch. Change these constants when the trained model's class
-order and labels are known:
+The installed model reports its labels in this order: `harmed`, `unharmed`,
+`stable`, `nothing`. The robot sketch assumes zero-based IDs in that order:
 
-| Grove class | Current class ID | Provisional victim target | Robot response |
-| --- | ---: | --- | --- |
-| Phi | 4 | Harmed | Two kit drops |
-| Psi | 5 | Stable | One kit drop |
-| Omega | 6 | Unharmed | No kit drop |
+| Model label | Printed symbol | Assumed class ID | Robot response |
+| --- | --- | ---: | --- |
+| Harmed | Phi (Φ) | 0 | Two kit drops |
+| Unharmed | Omega (Ω) | 1 | No kit drop |
+| Stable | Psi (Ψ) | 2 | One kit drop |
+| Nothing | Wall/background | 3 | Ignored |
 
-`GROVE_CLASS_PHI`, `GROVE_CLASS_PSI`, and `GROVE_CLASS_OMEGA` are the model's
-numeric class IDs. `GROVE_PHI_TARGET`, `GROVE_PSI_TARGET`, and
-`GROVE_OMEGA_TARGET` assign their victim meanings. The class IDs 4, 5, and 6
-retain the old Grove slots until the model's actual IDs are confirmed. Unknown
-Grove classes are ignored.
+The old IDs 4, 5, and 6 were provisional values for an earlier setup; the
+current sketch no longer uses them. The Pico has logged class 3 at score 99,
+but IDs 0–2 still need live target checks to confirm their meanings. The
+sketch uses the highest-scoring class and ignores unknown IDs.
 
 ## Nicla cognitive targets
 
