@@ -65,9 +65,7 @@ USB inference returned event code 3 (timeout), even with the Pico not polling
 the Grove. Reinitializing the sensor and fully power-cycling the Grove did not
 clear the error. The same timeout persisted on Pico I2C after the power cycle.
 The Pico sketch now assumes zero-based class IDs: 0 harmed, 1 unharmed,
-2 stable, and 3 nothing (ignored). It uses the highest-scoring class. These
-IDs and motor/kit-drop responses remain unverified until the camera returns
-inference results.
+2 stable, and 3 nothing (ignored). It uses the highest-scoring class.
 
 In a no-target integrated test, the Nicla sent `0` (unharmed) packets with
 long stability times, and the Pico accepted two as confidence 100. The Nicla
@@ -75,5 +73,8 @@ vision filter needs a separate false-positive fix before unattended operation.
 
 On 14 November, the updated Grove class mapping compiled and was uploaded to
 the Pico 2. A safe Nicla UART check sent zero-stability packets through LP1;
-the Pico logged six parsed packets at confidence 0. The new Grove class IDs
-could not be confirmed because camera sampling still times out.
+the Pico logged six parsed packets at confidence 0. In a later 30-second live
+check, the Pico logged repeated Grove class ID 3 results at score 99 and parsed
+Nicla UART packets. Grove inference is reaching the Pico again; the cause of
+the earlier timeout is unknown. The harmed, unharmed, and stable class IDs and
+motor/kit-drop responses remain unverified.
